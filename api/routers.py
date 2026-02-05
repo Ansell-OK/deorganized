@@ -1,0 +1,21 @@
+from rest_framework import routers
+from shows.views import ShowViewSet, ShowEpisodeViewSet, TagViewSet
+from users.views import UserViewSet, LikeViewSet, CommentViewSet, FollowViewSet, NotificationViewSet
+from users.wallet_auth import WalletAuthViewSet
+
+router = routers.DefaultRouter()
+
+# Register all ViewSets
+router.register(r'shows', ShowViewSet, basename='show')
+router.register(r'episodes', ShowEpisodeViewSet, basename='episode')
+router.register(r'tags', TagViewSet, basename='tag')
+router.register(r'users', UserViewSet, basename='user')
+router.register(r'likes', LikeViewSet, basename='like')
+router.register(r'comments', CommentViewSet, basename='comment')
+router.register(r'follows', FollowViewSet, basename='follow')
+router.register(r'notifications', NotificationViewSet, basename='notification')
+
+# Wallet Authentication
+router.register(r'auth/wallet', WalletAuthViewSet, basename='wallet-auth')
+
+urlpatterns = router.urls

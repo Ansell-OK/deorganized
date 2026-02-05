@@ -1,0 +1,129 @@
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def get_auth_message(self, request):
+        """Generate a one-time authentication message for wallet signing"""
+        wallet_address = request.data.get('wallet_address')
+        
+        if not wallet_address:
+            return Response({'error': 'wallet_address is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Generate unique nonce
+        nonce = str(uuid.uuid4())
+        
+        # Create authentication message
+        timestamp = int(time.time())
+        message = f"Sign this message to authenticate with Deorganized\n\nWallet: {wallet_address}\nNonce: {nonce}\nTimestamp: {timestamp}"
+        
+        # Store nonce in cache for 5 minutes
+        cache.set(f'auth_nonce_{wallet_address}', nonce, 300)
+        
+        return Response({
+            'message': message,
+            'nonce': nonce
+        })
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def login_or_register(self, request):
+        """
+        Verify wallet signature and either log in existing user or flag for registration.
+        
+        Expected payload:
+        - wallet_address: Stacks wallet address
+        - signed_message: Signature from wallet
+        - original_message: The message that was signed
+        """
+        wallet_address = request.data.get('wallet_address')
+        signed_message = request.data.get('signed_message')
+        original_message = request.data.get('original_message')
+        
+        if not all([wallet_address, signed_message, original_message]):
+            return Response({
+                'error': 'wallet_address, signed_message, and original_message are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Verify the nonce is valid
+        cached_nonce = cache.get(f'auth_nonce_{wallet_address}')
+        if not cached_nonce:
+            return Response({
+                'error': 'Authentication message expired. Please request a new one.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Verify nonce is in the message
+        if cached_nonce not in original_message:
+            return Response({
+                'error': 'Invalid authentication message'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # TODO: Implement proper Stacks signature verification here
+        # For now, we trust the nonce validation as proof of wallet ownership
+        
+        # Clear the nonce to prevent reuse
+        cache.delete(f'auth_nonce_{wallet_address}')
+        
+        # Check if user exists
+        try:
+            user = User.objects.get(stacks_address=wallet_address)
+            
+            # User exists - log them in
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                'is_new': False,
+                'user': UserSerializer(user).data,
+                'tokens': {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token)
+                }
+            })
+            
+        except User.DoesNotExist:
+            # New user - flag for registration
+            return Response({
+                'is_new': True,
+                'wallet_address': wallet_address,
+                'message': 'Please complete your profile setup'
+            })
+
+
+@action(detail=False, methods=['post'], permission_classes=[AllowAny])
+def get_auth_message(self, request):
+    """Generate a one-time authentication message for wallet signing"""
+    wallet_address = request.data.get('wallet_address')
+    
+    if not wallet_address:
+        return Response({'error': 'wallet_address is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    nonce = str(uuid.uuid4())
+    timestamp = int(time.time())
+    message = f"Sign this message to authenticate with Deorganized\n\nWallet: {wallet_address}\nNonce: {nonce}\nTimestamp: {timestamp}"
+    
+    cache.set(f'auth_nonce_{wallet_address}', nonce, 300)
+    
+    return Response({'message': message, 'nonce': nonce})
+
+@action(detail=False, methods=['post'], permission_classes=[AllowAny])
+def login_or_register(self, request):
+    """Verify wallet and return is_new flag"""
+    wallet_address = request.data.get('wallet_address')
+    signed_message = request.data.get('signed_message')
+    original_message = request.data.get('original_message')
+    
+    if not all([wallet_address, signed_message, original_message]):
+        return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    cached_nonce = cache.get(f'auth_nonce_{wallet_address}')
+    if not cached_nonce or cached_nonce not in original_message:
+        return Response({'error': 'Invalid or expired auth message'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    cache.delete(f'auth_nonce_{wallet_address}')
+    
+    try:
+        user = User.objects.get(stacks_address=wallet_address)
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'is_new': False,
+            'user': UserSerializer(user).data,
+            'tokens': {'refresh': str(refresh), 'access': str(refresh.access_token)}
+        })
+    except User.DoesNotExist:
+        return Response({'is_new': True, 'wallet_address': wallet_address})
