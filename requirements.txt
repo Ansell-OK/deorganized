@@ -12,6 +12,7 @@ pycryptodome==3.20.0
 
 # Database drivers
 psycopg2-binary==2.9.9  # For PostgreSQL (Railway)
+dj-database-url==2.2.0  # For parsing DATABASE_URL
 
 # Optional but recommended
 python-dotenv==1.0.0  # For loading environment variables from .env file
