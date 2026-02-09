@@ -53,20 +53,16 @@ class ShowSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at', 'creator', 'slug', 'share_count']
     
     def get_like_count(self, obj):
-        """Get like count from annotation or property"""
-        # Use the renamed annotation to avoid conflict with model property
-        if hasattr(obj, '_like_count'):
-            return obj._like_count
-        # Fallback to direct count
-        return obj.likes.count()
+        """Get like count from annotation"""
+        # CRITICAL: Check if annotation exists AND is not None
+        # hasattr() returns True even if value is None/0
+        return getattr(obj, '_like_count', obj.likes.count())
     
     def get_comment_count(self, obj):
-        """Get comment count from annotation or property"""
-        # Use the renamed annotation to avoid conflict with model property
-        if hasattr(obj, '_comment_count'):
-            return obj._comment_count
-        # Fallback to direct count
-        return obj.comments.count()
+        """Get comment count from annotation"""
+        # CRITICAL: Check if annotation exists AND is not None
+        # hasattr() returns True even if value is None/0
+        return getattr(obj, '_comment_count', obj.comments.count())
     
     def validate(self, data):
         """Validate recurring show fields"""
@@ -101,16 +97,12 @@ class ShowListSerializer(serializers.ModelSerializer):
     schedule_display = serializers.CharField(source='get_schedule_display', read_only=True)
     
     def get_like_count(self, obj):
-        """Get like count from annotation or property"""
-        if hasattr(obj, '_like_count'):
-            return obj._like_count
-        return obj.likes.count()
+        """Get like count from annotation"""
+        return getattr(obj, '_like_count', obj.likes.count())
     
     def get_comment_count(self, obj):
-        """Get comment count from annotation or property"""
-        if hasattr(obj, '_comment_count'):
-            return obj._comment_count
-        return obj.comments.count()
+        """Get comment count from annotation"""
+        return getattr(obj, '_comment_count', obj.comments.count())
     
     class Meta:
         model = Show
