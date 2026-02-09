@@ -126,6 +126,12 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Whitenoise configuration for serving static files
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# Tell WhiteNoise to NOT handle media files - let Django serve them
+WHITENOISE_AUTOREFRESH = True
+WHITENOISE_USE_FINDERS = True  
+WHITENOISE_ROOT = None  # Don't serve root directory
+WHITENOISE_INDEX_FILE = False  # Don't serve index.html
+
 # Media files (User uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
