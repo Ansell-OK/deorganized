@@ -53,20 +53,28 @@ class ShowSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at', 'creator', 'slug', 'share_count']
     
     def get_like_count(self, obj):
-        """Get like count from annotation or property"""
-        # Use the renamed annotation to avoid conflict with model property
+        """Get like count using ContentType"""
+        from django.contrib.contenttypes.models import ContentType
+        from users.models import Like
+        
         if hasattr(obj, '_like_count'):
             return obj._like_count
-        # Fallback to direct count
-        return obj.likes.count()
+        
+        # Manual count using ContentType
+        show_ct = ContentType.objects.get_for_model(obj)
+        return Like.objects.filter(content_type=show_ct, object_id=obj.id).count()
     
     def get_comment_count(self, obj):
-        """Get comment count from annotation or property"""
-        # Use the renamed annotation to avoid conflict with model property
+        """Get comment count using ContentType"""
+        from django.contrib.contenttypes.models import ContentType
+        from users.models import Comment
+        
         if hasattr(obj, '_comment_count'):
             return obj._comment_count
-        # Fallback to direct count
-        return obj.comments.count()
+        
+        # Manual count using ContentType  
+        show_ct = ContentType.objects.get_for_model(obj)
+        return Comment.objects.filter(content_type=show_ct, object_id=obj.id).count()
     
     def validate(self, data):
         """Validate recurring show fields"""
@@ -101,16 +109,26 @@ class ShowListSerializer(serializers.ModelSerializer):
     schedule_display = serializers.CharField(source='get_schedule_display', read_only=True)
     
     def get_like_count(self, obj):
-        """Get like count from annotation or property"""
+        """Get like count using ContentType"""
+        from django.contrib.contenttypes.models import ContentType
+        from users.models import Like
+        
         if hasattr(obj, '_like_count'):
             return obj._like_count
-        return obj.likes.count()
+        
+        show_ct = ContentType.objects.get_for_model(obj)
+        return Like.objects.filter(content_type=show_ct, object_id=obj.id).count()
     
     def get_comment_count(self, obj):
-        """Get comment count from annotation or property"""
+        """Get comment count using ContentType"""
+        from django.contrib.contenttypes.models import ContentType
+        from users.models import Comment
+        
         if hasattr(obj, '_comment_count'):
             return obj._comment_count
-        return obj.comments.count()
+        
+        show_ct = ContentType.objects.get_for_model(obj)
+        return Comment.objects.filter(content_type=show_ct, object_id=obj.id).count()
     
     class Meta:
         model = Show
