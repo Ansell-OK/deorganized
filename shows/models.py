@@ -116,19 +116,17 @@ class Show(models.Model):
         help_text="List of ISO date strings for cancelled recurring show instances"
     )
     
-    # Generic relations for engagement (likes/comments)
-    likes = GenericRelation('users.Like', content_type_field='content_type', object_id_field='object_id', related_query_name='show')
-    comments = GenericRelation('users.Comment', content_type_field='content_type', object_id_field='object_id', related_query_name='show')
-    
-    # Analytics - using direct fields like share_count
-    like_count = models.IntegerField(default=0, help_text="Number of likes (cached)")
-    comment_count = models.IntegerField(default=0, help_text="Number of comments (cached)")
+    # Analytics
     share_count = models.IntegerField(default=0, help_text="Number of times this show has been shared")
     
     # Metadata
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # Generic relations for likes and comments
+    likes = GenericRelation('users.Like', related_query_name='show')
+    comments = GenericRelation('users.Comment', related_query_name='show')
     
     class Meta:
         ordering = ['-created_at']
@@ -140,6 +138,10 @@ class Show(models.Model):
     
     def __str__(self):
         return self.title
+    
+    # REMOVED: like_count and comment_count properties
+    # These were conflicting with queryset annotations in views
+    # Counts are now calculated exclusively via annotations in ShowViewSet
     
     def get_schedule_display(self):
         """Return human-readable schedule"""

@@ -56,6 +56,11 @@ class UserViewSet(viewsets.ModelViewSet):
             return CreatorProfileSerializer
         return UserSerializer
     
+    def get_serializer(self, *args, **kwargs):
+        """Inject request context for proper image URL generation"""
+        kwargs.setdefault('context', self.get_serializer_context())
+        return super().get_serializer(*args, **kwargs)
+    
     def get_permissions(self):
         if self.action in ['register', 'login', 'wallet_login_or_check', 'complete_setup']:
             return [AllowAny()]
@@ -451,22 +456,11 @@ class LikeViewSet(viewsets.ModelViewSet):
         )
         
         if not created:
-            # UNLIKING - decrement the count
-            content_object = like.content_object
-            if hasattr(content_object, 'like_count'):
-                content_object.like_count = max(0, content_object.like_count - 1)
-                content_object.save(update_fields=['like_count'])
-            
             like.delete()
             return Response({'status': 'unliked'}, status=status.HTTP_200_OK)
         
-        # LIKING - increment the count
-        content_object = like.content_object
-        if hasattr(content_object, 'like_count'):
-            content_object.like_count += 1
-            content_object.save(update_fields=['like_count'])
-        
         # Create notification for content owner
+        content_object = like.content_object
         recipient = None
         
         if hasattr(content_object, 'creator'):
@@ -535,13 +529,8 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         comment = serializer.save(user=self.request.user)
         
-        # INCREMENT comment_count on the content object
-        content_object = comment.content_object
-        if hasattr(content_object, 'comment_count'):
-            content_object.comment_count += 1
-            content_object.save(update_fields=['comment_count'])
-        
         # Create notification for content owner
+        content_object = comment.content_object
         recipient = None
         
         if hasattr(content_object, 'creator'):
@@ -560,15 +549,6 @@ class CommentViewSet(viewsets.ModelViewSet):
                 content_type=comment.content_type,
                 object_id=comment.object_id
             )
-    
-    def perform_destroy(self, instance):
-        # DECREMENT comment_count on the content object before deleting
-        content_object = instance.content_object
-        if hasattr(content_object, 'comment_count'):
-            content_object.comment_count = max(0, content_object.comment_count - 1)
-            content_object.save(update_fields=['comment_count'])
-        
-        instance.delete()
 
 
 class FollowViewSet(viewsets.ModelViewSet):

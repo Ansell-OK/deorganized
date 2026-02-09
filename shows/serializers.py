@@ -36,6 +36,8 @@ class ShowSerializer(serializers.ModelSerializer):
     """Full show serializer with creator info and engagement counts"""
     creator = ShowCreatorSerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
+    like_count = serializers.SerializerMethodField()
+    comment_count = serializers.SerializerMethodField()
     schedule_display = serializers.CharField(source='get_schedule_display', read_only=True)
     episodes = ShowEpisodeSerializer(many=True, read_only=True)
     
@@ -48,7 +50,23 @@ class ShowSerializer(serializers.ModelSerializer):
             'status', 'created_at', 'updated_at',
             'like_count', 'comment_count', 'share_count', 'episodes'
         ]
-        read_only_fields = ['created_at', 'updated_at', 'creator', 'slug', 'share_count', 'like_count', 'comment_count']
+        read_only_fields = ['created_at', 'updated_at', 'creator', 'slug', 'share_count']
+    
+    def get_like_count(self, obj):
+        """Get like count from annotation or property"""
+        # Use the renamed annotation to avoid conflict with model property
+        if hasattr(obj, '_like_count'):
+            return obj._like_count
+        # Fallback to direct count
+        return obj.likes.count()
+    
+    def get_comment_count(self, obj):
+        """Get comment count from annotation or property"""
+        # Use the renamed annotation to avoid conflict with model property
+        if hasattr(obj, '_comment_count'):
+            return obj._comment_count
+        # Fallback to direct count
+        return obj.comments.count()
     
     def validate(self, data):
         """Validate recurring show fields"""
@@ -78,7 +96,21 @@ class ShowListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views"""
     creator = ShowCreatorSerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
+    like_count = serializers.SerializerMethodField()
+    comment_count = serializers.SerializerMethodField()
     schedule_display = serializers.CharField(source='get_schedule_display', read_only=True)
+    
+    def get_like_count(self, obj):
+        """Get like count from annotation or property"""
+        if hasattr(obj, '_like_count'):
+            return obj._like_count
+        return obj.likes.count()
+    
+    def get_comment_count(self, obj):
+        """Get comment count from annotation or property"""
+        if hasattr(obj, '_comment_count'):
+            return obj._comment_count
+        return obj.comments.count()
     
     class Meta:
         model = Show
@@ -96,14 +128,21 @@ class ShowCreateUpdateSerializer(serializers.ModelSerializer):
     tag_ids = serializers.ListField(
         child=serializers.IntegerField(),
         write_only=True,
-        required=False
+        required=False,
+        help_text="List of existing tag IDs to assign"
+    )
+    tag_names = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        write_only=True,
+        required=False,
+        help_text="List of tag names (will be created if they don't exist)"
     )
     
     class Meta:
         model = Show
         fields = [
             'title', 'description', 'thumbnail',
-            'external_link', 'link_platform', 'tag_ids',
+            'external_link', 'link_platform', 'tag_ids', 'tag_names',
             'is_recurring', 'recurrence_type', 'day_of_week', 'scheduled_time', 'status'
         ]
     
@@ -142,25 +181,50 @@ class ShowCreateUpdateSerializer(serializers.ModelSerializer):
         return data
     
     def create(self, validated_data):
-        """Create show and assign tags"""
+        """Create show and assign/create tags"""
         tag_ids = validated_data.pop('tag_ids', [])
+        tag_names = validated_data.pop('tag_names', [])
         show = Show.objects.create(**validated_data)
         
+        # Handle tag IDs (existing tags)
         if tag_ids:
-            show.tags.set(tag_ids)
+            show.tags.add(*tag_ids)
+        
+        # Handle tag names (get or create)
+        if tag_names:
+            from .models import Tag
+            for tag_name in tag_names:
+                tag, created = Tag.objects.get_or_create(
+                    name=tag_name,
+                    defaults={'slug': tag_name.lower().replace(' ', '-')}
+                )
+                show.tags.add(tag)
         
         return show
     
     def update(self, instance, validated_data):
-        """Update show and reassign tags"""
+        """Update show and reassign/create tags"""
         tag_ids = validated_data.pop('tag_ids', None)
+        tag_names = validated_data.pop('tag_names', None)
         
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         
+        # Handle tag IDs
         if tag_ids is not None:
             instance.tags.set(tag_ids)
+        
+        # Handle tag names
+        if tag_names is not None:
+            from .models import Tag
+            instance.tags.clear()  # Clear existing if tag_names provided
+            for tag_name in tag_names:
+                tag, created = Tag.objects.get_or_create(
+                    name=tag_name,
+                    defaults={'slug': tag_name.lower().replace(' ', '-')}
+                )
+                instance.tags.add(tag)
         
         return instance
 

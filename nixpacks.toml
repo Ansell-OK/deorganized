@@ -7,7 +7,11 @@ aptPkgs = ["automake", "autoconf", "libtool", "pkg-config"]
 
 [phases.build]
 # Only collect static files during build phase (database not available yet)
-cmds = ["python manage.py collectstatic --no-input"]
+# Also create preset tags (idempotent, safe to run multiple times)
+cmds = [
+    "python manage.py collectstatic --no-input",
+    "python manage.py create_preset_tags || true"
+]
 
 [start]
 # Run migrations FIRST (database is now available), then start Gunicorn

@@ -71,6 +71,21 @@ class User(AbstractUser):
     def following_count(self):
         """Number of users this user is following"""
         return self.following.count()
+    
+    def get_liked_shows(self):
+        """
+        Return all shows this user has liked.
+        Uses ContentType to filter likes for Show model only.
+        """
+        from django.contrib.contenttypes.models import ContentType
+        from shows.models import Show
+        
+        show_content_type = ContentType.objects.get_for_model(Show)
+        liked_show_ids = self.likes.filter(
+            content_type=show_content_type
+        ).values_list('object_id', flat=True)
+        
+        return Show.objects.filter(id__in=liked_show_ids)
 
 
 class Like(models.Model):

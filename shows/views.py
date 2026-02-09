@@ -105,13 +105,19 @@ class ShowViewSet(viewsets.ModelViewSet):
         
         return queryset.distinct()  # Avoid duplicates from tag filtering
     
+    def get_serializer(self, *args, **kwargs):
+        """Inject request context for proper image URL generation"""
+        kwargs.setdefault('context', self.get_serializer_context())
+        return super().get_serializer(*args, **kwargs)
+    
     def perform_create(self, serializer):
         """Set the creator to the current user"""
         serializer.save(creator=self.request.user)
     
     @action(detail=False, methods=['get'])
     def upcoming_shows(self, request):
-        """Get all published recurring shows"""
+        """Get all published recurring shows with counts"""
+        # get_queryset() already has annotations from base queryset
         shows = self.get_queryset().filter(
             is_recurring=True,
             status='published'
@@ -121,7 +127,8 @@ class ShowViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def my_shows(self, request):
-        """Get current user's shows"""
+        """Get current user's shows with counts"""
+        # get_queryset() already has annotations from base queryset
         shows = self.get_queryset().filter(creator=request.user)
         serializer = self.get_serializer(shows, many=True)
         return Response(serializer.data)
