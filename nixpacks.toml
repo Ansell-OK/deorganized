@@ -12,6 +12,6 @@ cmds = [
 ]
 
 [start]
-# Run migrations FIRST, then create preset tags, then start Gunicorn
-# Migrations and tags run on every deploy to keep database up-to-date
-cmd = "python manage.py migrate --no-input && python manage.py create_preset_tags && gunicorn deorganized.wsgi:application --bind 0.0.0.0:$PORT"
+# Run migrations, create preset tags, create superuser, then start Gunicorn
+# All commands run on every deploy to keep database up-to-date
+cmd = "python manage.py migrate --no-input && python manage.py create_preset_tags && python manage.py create_superuser_env && gunicorn deorganized.wsgi:application --bind 0.0.0.0:$PORT"
