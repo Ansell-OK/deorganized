@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import (
@@ -37,12 +37,10 @@ urlpatterns = [
     
     # Debug endpoint (remove in production later)
     path('api/debug/media/', lambda request: __import__('api.debug_views', fromlist=['debug_media_files']).debug_media_files(request)),
+    
+    # Custom media serving (bypasses WhiteNoise)
+    re_path(r'^media/(?P<path>.*)$', lambda request, path: __import__('api.debug_views', fromlist=['serve_media']).serve_media(request, path)),
 ]
-
-# Serve media files (development and production)
-# NOTE: In production, Django serves media via Gunicorn
-# For high-traffic sites, consider using a CDN or nginx
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # Serve static files in development only (production uses collectstatic)
 if settings.DEBUG:

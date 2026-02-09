@@ -1,7 +1,18 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse, Http404
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
 import os
+
+
+@require_http_methods(["GET"])
+def serve_media(request, path):
+    """Serve media files directly, bypassing WhiteNoise"""
+    file_path = os.path.join(settings.MEDIA_ROOT, path)
+    
+    if not os.path.exists(file_path):
+        raise Http404("Media file not found")
+    
+    return FileResponse(open(file_path, 'rb'))
 
 
 @require_http_methods(["GET"])
