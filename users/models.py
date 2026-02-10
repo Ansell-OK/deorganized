@@ -22,6 +22,14 @@ class User(AbstractUser):
 
     stacks_address = models.CharField(max_length=255, unique=True, null=True, blank=True, db_index=True, help_text="Stacks wallet address")
     
+    # Display name (optional, can be different from username)
+    display_name = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Display name shown to other users (optional)"
+    )
+    
     # Profile information
     bio = models.TextField(blank=True, max_length=500)
     profile_picture = models.ImageField(

@@ -333,6 +333,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 user = User.objects.create(
                     stacks_address=wallet_address,
                     username=username,
+                    display_name=serializer.validated_data.get('display_name', ''),
                     role=serializer.validated_data.get('role', 'user'),
                     first_name=serializer.validated_data.get('first_name', ''),
                     last_name=serializer.validated_data.get('last_name', ''),

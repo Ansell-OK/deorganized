@@ -16,7 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'email', 'first_name', 'last_name',
+            'id', 'username', 'display_name', 'email', 'first_name', 'last_name',
             'role', 'stacks_address', 'bio', 'profile_picture', 'cover_photo',
             'website', 'twitter', 'instagram', 'youtube',
             'is_verified', 'date_joined',
@@ -85,7 +85,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'username', 'bio', 'profile_picture', 'cover_photo',
+            'username', 'display_name', 'bio', 'profile_picture', 'cover_photo',
             'website', 'twitter', 'instagram', 'youtube', 'role'
         ]
     
@@ -317,6 +317,7 @@ class CompleteSetupSerializer(serializers.Serializer):
     """
     wallet_address = serializers.CharField(max_length=255, required=True)
     username = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    display_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
     role = serializers.ChoiceField(choices=['user', 'creator'], default='user')
     first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
